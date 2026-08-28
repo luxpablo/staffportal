@@ -1,0 +1,575 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// AUTH & USER
+model User {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  username         String    @unique
+  password         String
+  name             String
+  avatar           String?
+  discordUsername  String?
+  employeeId       String    @unique
+  status           String    @default("Active") // Active, Inactive, On Leave, Suspended, Resigned, Terminated
+  joinDate         DateTime  @default(now())
+  lastActive       DateTime  @default(now())
+  emailVerified    Boolean   @default(false)
+  twoFactorEnabled Boolean   @default(false)
+  twoFactorSecret  String?
+  roleId           String?
+  role             Role?     @relation(fields: [roleId], references: [id])
+  departmentId     String?
+  department       Department? @relation(fields: [departmentId], references: [id])
+  managerId        String?
+  manager          User?     @relation("ManagerStaff", fields: [managerId], references: [id])
+  managedStaff     User[]    @relation("ManagerStaff")
+  staffProfile     StaffProfile?
+  createdTasks     Task[]    @relation("CreatedBy")
+  assignedTasks    TaskAssignment[]
+  taskComments     TaskComment[]
+  payouts          Payout[]
+  earnings         EarningsTransaction[]
+  attendance       Attendance[]
+  leaveRequests    LeaveRequest[]
+  notifications    Notification[]
+  auditLogs        AuditLog[]
+  documents        StaffDocument[]
+  performanceReviews PerformanceReview[] @relation("ReviewTarget")
+  givenReviews     PerformanceReview[] @relation("Reviewer")
+  ticketAssignments TicketAssignment[]
+  createdAnnouncements Announcement[]
+  sessions         Session[]
+  notificationPrefs UserNotificationPreference[]
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([status])
+  @@index([departmentId])
+  @@index([roleId])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  ip        String?
+  userAgent String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Role {
+  id          String           @id @default(cuid())
+  name        String           @unique
+  slug        String           @unique
+  description String?
+  isSystem    Boolean          @default(false)
+  users       User[]
+  permissions RolePermission[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model Permission {
+  id    String           @id @default(cuid())
+  key   String           @unique // e.g. staff:read, task:create
+  label String
+  group String // staff, tasks, payouts, etc
+  roles RolePermission[]
+}
+
+model RolePermission {
+  id           String     @id @default(cuid())
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+}
+
+model Department {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  managerId   String?
+  budget      Float    @default(0)
+  color       String   @default("#0ea5e9")
+  isActive    Boolean  @default(true)
+  members     User[]
+  tasks       Task[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model StaffProfile {
+  id           String  @id @default(cuid())
+  userId       String  @unique
+  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bio          String?
+  phone        String?
+  address      String?
+  salary       Float   @default(0)
+  commissionRate Float @default(0)
+  qualityScore Float   @default(0)
+  onboardingChecklist Json? // array of steps
+  offboardingReason String?
+  offboardingDate DateTime?
+}
+
+// TASKS
+model Task {
+  id            String           @id @default(cuid())
+  taskId        String           @unique // e.g. ZYP-001
+  title         String
+  description   String           @db.Text
+  status        String           @default("Backlog") // Backlog, Assigned, Accepted, In Progress, Waiting, Submitted, Under Review, Approved, Rejected, Completed, Cancelled
+  priority      String           @default("Medium") // Low, Medium, High, Urgent
+  departmentId  String?
+  department    Department?      @relation(fields: [departmentId], references: [id])
+  createdById   String
+  createdBy     User             @relation("CreatedBy", fields: [createdById], references: [id])
+  deadline      DateTime?
+  estimatedHours Float?
+  actualHours    Float?
+  reward        Float            @default(0)
+  tags          String[]         @default([])
+  attachments   TaskAttachment[]
+  comments      TaskComment[]
+  checklist     TaskChecklist[]
+  assignments   TaskAssignment[]
+  activities    TaskActivity[]
+  payoutId      String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([status])
+  @@index([priority])
+  @@index([departmentId])
+}
+
+model TaskAssignment {
+  id         String   @id @default(cuid())
+  taskId     String
+  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignedAt DateTime @default(now())
+  assignedBy String?
+
+  @@unique([taskId, userId])
+}
+
+model TaskComment {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  content   String   @db.Text
+  isInternal Boolean @default(false)
+  parentId  String?
+  parent    TaskComment? @relation("CommentReplies", fields: [parentId], references: [id])
+  replies   TaskComment[] @relation("CommentReplies")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TaskAttachment {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  fileName  String
+  fileUrl   String
+  fileSize  Int
+  mimeType  String
+  uploadedBy String
+  createdAt DateTime @default(now())
+}
+
+model TaskChecklist {
+  id        String  @id @default(cuid())
+  taskId    String
+  task      Task    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  title     String
+  completed Boolean @default(false)
+  sortOrder Int     @default(0)
+}
+
+model TaskActivity {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId    String?
+  action    String
+  details   String?
+  createdAt DateTime @default(now())
+}
+
+// TICKETS
+model Ticket {
+  id          String             @id @default(cuid())
+  ticketId    String             @unique // e.g. TKT-001
+  customer    String
+  subject     String
+  category    String             @default("General")
+  priority    String             @default("Medium")
+  status      String             @default("Open") // Open, Assigned, In Progress, Waiting, Resolved, Closed
+  description String?            @db.Text
+  rating      Int?
+  responseTime Int? // minutes
+  resolutionTime Int?
+  assignments TicketAssignment[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([status])
+}
+
+model TicketAssignment {
+  id         String   @id @default(cuid())
+  ticketId   String
+  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  assignedAt DateTime @default(now())
+}
+
+// PAYOUTS & EARNINGS
+model Payout {
+  id            String   @id @default(cuid())
+  payoutId      String   @unique // PAY-001
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  amount        Float
+  currency      String   @default("INR")
+  type          String   // Task reward, Commission, Salary, Bonus, Referral, etc
+  status        String   @default("Pending") // Pending, Approved, Processing, Paid, Failed, Cancelled
+  description   String?
+  relatedTaskId String?
+  relatedTicketId String?
+  createdById   String?
+  approvedById  String?
+  paymentMethod String?  // Bank, UPI, PayPal
+  transactionId String?
+  notes         String?  @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([status])
+  @@index([userId])
+}
+
+model EarningsTransaction {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  amount      Float
+  type        String   // CREDIT / DEBIT
+  category    String   // TASK_REWARD, BONUS, DEDUCTION, COMMISSION
+  description String
+  payoutId    String?
+  balanceAfter Float?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+}
+
+model CommissionRule {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  type        String   // percentage, fixed, tiered
+  value       Float
+  departmentId String?
+  userId      String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// PERFORMANCE
+model PerformanceReview {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation("ReviewTarget", fields: [userId], references: [id])
+  reviewerId  String
+  reviewer    User     @relation("Reviewer", fields: [reviewerId], references: [id])
+  score       Int      // 0-100
+  quality     Int      @default(0)
+  comments    String?  @db.Text
+  metrics     Json?    // { completionRate, onTimeRate, etc }
+  createdAt   DateTime @default(now())
+}
+
+// ATTENDANCE & LEAVE
+model Attendance {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  date      DateTime @db.Date
+  clockIn   DateTime?
+  clockOut  DateTime?
+  breakStart DateTime?
+  breakEnd  DateTime?
+  workingHours Float?
+  breakHours  Float?
+  status    String   @default("Present") // Present, Absent, Late, Half-day
+  createdAt DateTime @default(now())
+
+  @@unique([userId, date])
+  @@index([date])
+}
+
+model LeaveRequest {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  type      String   // Sick, Casual, Paid, Unpaid
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+  reason    String   @db.Text
+  attachment String?
+  status    String   @default("Pending") // Pending, Approved, Rejected, Cancelled
+  reviewedBy String?
+  reviewedAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([status])
+}
+
+// ANNOUNCEMENTS & NOTIFICATIONS
+model Announcement {
+  id          String   @id @default(cuid())
+  title       String
+  content     String   @db.Text
+  priority    String   @default("General") // General, Important, Emergency, HR, Technical, Maintenance
+  departmentId String?
+  targetRoles String[] @default([])
+  targetUsers String[] @default([])
+  publishDate DateTime @default(now())
+  expiryDate  DateTime?
+  attachments String[] @default([])
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String   @db.Text
+  type      String   @default("info")
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
+}
+
+// DOCUMENTS
+model StaffDocument {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fileName    String
+  fileType    String
+  fileUrl     String
+  fileSize    Int
+  uploadedBy  String
+  expiryDate  DateTime?
+  createdAt   DateTime @default(now())
+}
+
+// EMAIL SYSTEM — real SMTP, queue, templates, logs, notification prefs
+model SmtpSettings {
+  id          String   @id @default(cuid())
+  host        String
+  port        Int
+  username    String
+  passwordEnc String   @db.Text // AES-256-GCM encrypted, never exposed
+  encryption  String   @default("STARTTLS") // None, SSL, STARTTLS
+  fromName    String
+  fromEmail   String
+  replyTo     String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model EmailTemplate {
+  id          String   @id @default(cuid())
+  key         String   @unique // e.g. staff_welcome, task_assigned
+  name        String
+  subject     String
+  htmlBody    String   @db.Text
+  textBody    String?  @db.Text
+  variables   String[] @default([]) // ["staff_name","task_title"]
+  isEnabled   Boolean  @default(true)
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model EmailQueue {
+  id           String    @id @default(cuid())
+  recipient    String
+  subject      String
+  templateKey  String?
+  html         String?   @db.Text
+  text         String?   @db.Text
+  relatedEntity String?
+  relatedId    String?
+  status       String    @default("Pending") // Pending, Processing, Sent, Failed
+  attemptCount Int       @default(0)
+  maxAttempts  Int       @default(3)
+  error        String?   @db.Text
+  sentAt       DateTime?
+  failedAt     DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([status])
+  @@index([recipient])
+  @@index([createdAt])
+}
+
+model NotificationSetting {
+  id          String   @id @default(cuid())
+  eventKey    String   @unique // e.g. task_assigned, payout_paid
+  label       String
+  description String?
+  channelEmail Boolean @default(true)
+  channelInApp Boolean @default(true)
+  isEnabled   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model UserNotificationPreference {
+  id        String  @id @default(cuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventKey  String
+  emailEnabled Boolean @default(true)
+  inAppEnabled Boolean @default(true)
+
+  @@unique([userId, eventKey])
+  @@index([userId])
+}
+
+// Extend User with notification prefs relation — added via fields below, keep existing User
+// Need to add relation on User model manually: add line to User model
+// (Prisma requires relation field on User — we patch User below)
+
+// AUDIT & INTEGRATIONS
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  oldValue  Json?
+  newValue  Json?
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([entity])
+  @@index([createdAt])
+}
+
+model Integration {
+  id        String   @id @default(cuid())
+  name      String   @unique // discord, smtp, whmcs, paymenter, pterodactyl
+  config    Json
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+// Legacy kept for backwards compat
+model AdminUser {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  role      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+model Product {
+  id            Int     @id @default(autoincrement())
+  name          String
+  slug          String  @unique
+  description   String
+  category      String
+  whmcsProductId Int?
+  whmcsGroupId  Int?
+  featured      Boolean
+  sortOrder     Int
+}
+model Game {
+  id          Int     @id @default(autoincrement())
+  name        String
+  slug        String  @unique
+  category    String
+  whmcsGroupId Int?
+  featured    Boolean
+}
+model BlogPost {
+  id       Int    @id @default(autoincrement())
+  title    String
+  slug     String @unique
+  content  String
+  status   String
+  category String
+}
+model FAQ {
+  id        Int     @id @default(autoincrement())
+  question  String
+  answer    String
+  category  String
+  sort      Int
+  published Boolean
+}
+model Location {
+  id         Int    @id @default(autoincrement())
+  city       String
+  country    String
+  datacenter String
+  cpu        String
+  status     String
+}
+model WHMCSSettings {
+  id            Int    @id @default(autoincrement())
+  whmcsUrl      String
+  apiIdentifier String
+  apiSecret     String
+}
+model WHMCSProductMapping {
+  id             Int       @id @default(autoincrement())
+  websiteProduct String
+  whmcsPid       Int
+  whmcsGid       Int
+  status         String
+  lastSync       DateTime?
+}

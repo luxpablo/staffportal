@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Users, UserCheck, UserX, Building2, Activity, ArrowRight, Shield, Search, LayoutDashboard, LogIn, Sparkles, Clock } from "lucide-react";
+import { Users, UserCheck, UserX, Building2, Activity, ArrowRight, Shield, Search, LayoutDashboard, LogIn, Sparkles, Clock, Zap, BarChart3, Lock, Workflow, Star, Quote, Check, Timer, Layers, Globe, Award, Target, FileCheck } from "lucide-react";
 
 type Staff = {
   id:string; name:string; email:string; username:string; employeeId:string; status:string;
@@ -245,6 +245,137 @@ export default function HomepageClient(){
             )}
           </div>
 
+        </div>
+      </section>
+
+      {/* Features */}
+      <section className="py-14 bg-white dark:bg-slate-900 border-y">
+        <div className="max-w-7xl mx-auto px-4 lg:px-6">
+          <div className="text-center max-w-2xl mx-auto mb-10">
+            <Badge variant="outline" className="gap-2 mb-3"><Zap className="h-3 w-3"/> Platform Features</Badge>
+            <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Everything to run Zyphron Cloud staff</h2>
+            <p className="text-sm text-muted-foreground mt-2">From hiring to payouts — all in one premium SaaS portal. Built for hosting companies at scale.</p>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {[
+              {icon:Users, title:"Staff Management", desc:"Roles, departments, onboarding/offboarding, documents, attendance & leave — with RBAC and audit logs.", color:"bg-blue-500"},
+              {icon:Layers, title:"Task & Kanban", desc:"Linear-style tasks, 11 statuses, checklist, comments, drag-drop board, calendar & workload.", color:"bg-indigo-500"},
+              {icon:BarChart3, title:"Payouts & Earnings", desc:"Rewards, commissions, salary, immutable ledger, approval workflow, financial reports.", color:"bg-emerald-500"},
+              {icon:Activity, title:"Real-time & Notifications", desc:"In-app + email + Discord, live activity feed, announcements, performance reviews.", color:"bg-violet-500"},
+              {icon:Lock, title:"Enterprise Security", desc:"bcrypt, httpOnly JWT, RBAC, audit append-only, encrypted SMTP, rate limiting, 2FA ready.", color:"bg-slate-700"},
+              {icon:Globe, title:"Integrations Ready", desc:"WHMCS, Paymenter, Pterodactyl webhooks — auto commission, Discord & SMTP.", color:"bg-cyan-600"},
+            ].map(f=>(
+              <Card key={f.title} className="card-hover group">
+                <CardContent className="p-6">
+                  <div className={`h-11 w-11 rounded-xl ${f.color} flex items-center justify-center text-white mb-3 group-hover:scale-105 transition-transform`}><f.icon className="h-5 w-5"/></div>
+                  <div className="font-semibold">{f.title}</div>
+                  <div className="text-sm text-muted-foreground mt-1 leading-relaxed">{f.desc}</div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Workflow */}
+      <section className="py-12 bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900">
+        <div className="max-w-7xl mx-auto px-4 lg:px-6">
+          <div className="text-center mb-8">
+            <Badge variant="secondary" className="gap-2 mb-3"><Workflow className="h-3 w-3"/> How it works</Badge>
+            <h2 className="text-2xl font-bold tracking-tight">From application to active staff in 3 steps</h2>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              {step:"01", title:"Candidate Applies", desc:"Public /apply — 2-step form: personal details (name, DOB, phone, address, state, country, ID proof, photo) + questions. Files to /uploads.", icon:UserCheck},
+              {step:"02", title:"Admin Reviews", desc:"/applications — filter Pending/Approved, view ID proof & photo, Q&A, approve/reject with audit + email (staff_welcome).", icon:FileCheck},
+              {step:"03", title:"Staff Onboarded", desc:"Approved → staff created, dashboard shows live Active/Offline/Whole Team, tasks assigned, payouts & attendance live.", icon:Award},
+            ].map(s=>(
+              <div key={s.step} className="relative rounded-2xl border bg-white dark:bg-slate-900 p-6 shadow-soft">
+                <div className="h-10 w-10 rounded-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center font-bold text-sm">{s.step}</div>
+                <div className="mt-4 font-semibold flex items-center gap-2"><s.icon className="h-4 w-4 text-blue-600"/>{s.title}</div>
+                <div className="text-sm text-muted-foreground mt-1">{s.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials & Social Proof */}
+      <section className="py-12 bg-slate-900 text-white">
+        <div className="max-w-7xl mx-auto px-4 lg:px-6">
+          <div className="flex flex-col lg:flex-row justify-between gap-8 items-start">
+            <div>
+              <Badge className="bg-white/10 text-white border-white/20 gap-2 mb-3"><Star className="h-3 w-3"/> Trusted by Zyphron Cloud</Badge>
+              <h2 className="text-2xl font-bold">Built for hosting teams that ship</h2>
+              <p className="text-sm text-slate-400 mt-2">Premium SaaS feel — Linear + Vercel + Stripe Dashboard + HRMS.</p>
+            </div>
+            <div className="flex gap-2">
+              <Link href="/apply"><Button className="bg-white text-slate-900 hover:bg-slate-100 gap-2">Apply Now <ArrowRight className="h-4 w-4"/></Button></Link>
+              <Link href="/dashboard"><Button variant="outline" className="border-white/20 text-white hover:bg-white/10">Open Dashboard</Button></Link>
+            </div>
+          </div>
+          <div className="grid md:grid-cols-3 gap-5 mt-8">
+            {[
+              {name:"Ravneet Brar", role:"Super Admin", quote:"Finally a portal that feels like a real SaaS — not a Bootstrap admin. Dark-first, fast, and every button does something."},
+              {name:"Aarav Sharma", role:"Development", quote:"Tasks + Kanban + payouts in one place. Drag to Completed and my earnings ledger updates instantly."},
+              {name:"Priya Patel", role:"HR Manager", quote:"Applications with ID proof & photo verification, then one-click approve. Onboarding checklist is gold."},
+            ].map(t=>(
+              <Card key={t.name} className="bg-white/5 border-white/10 text-white">
+                <CardContent className="p-5">
+                  <Quote className="h-5 w-5 text-white/40 mb-3"/>
+                  <div className="text-sm leading-relaxed">“{t.quote}”</div>
+                  <div className="mt-4 flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-full bg-white text-slate-900 flex items-center justify-center font-bold text-xs">{t.name[0]}</div>
+                    <div><div className="text-sm font-medium">{t.name}</div><div className="text-xs text-slate-400">{t.role}</div></div>
+                    <div className="ml-auto flex gap-0.5">{Array.from({length:5}).map((_,i)=><Star key={i} className="h-3 w-3 fill-amber-400 text-amber-400"/> )}</div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Departments showcase */}
+      <section className="py-10 bg-slate-50 dark:bg-slate-950">
+        <div className="max-w-7xl mx-auto px-4 lg:px-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-semibold flex items-center gap-2"><Building2 className="h-5 w-5 text-blue-600"/> Departments</h3>
+            <span className="text-xs text-muted-foreground">10 defaults: Development, Support, Sales, Marketing, Finance, HR, Infrastructure, Moderation, Design, Management</span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            {["Development","Support","Sales","Design","Infrastructure","HR","Finance","Marketing","Moderation","Management"].map(d=>(
+              <div key={d} className="rounded-xl border bg-white dark:bg-slate-900 p-4 text-center card-hover">
+                <div className="h-8 w-8 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center mx-auto font-bold text-xs">{d[0]}</div>
+                <div className="text-sm font-medium mt-2">{d}</div>
+                <div className="text-xs text-muted-foreground">View in /departments</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="py-12">
+        <div className="max-w-7xl mx-auto px-4 lg:px-6">
+          <div className="rounded-3xl bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-600 p-8 lg:p-10 text-white relative overflow-hidden">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.15),transparent_50%)]" />
+            <div className="relative flex flex-col lg:flex-row justify-between gap-6 items-start lg:items-center">
+              <div>
+                <h3 className="text-2xl font-bold">Ready to join Zyphron Cloud?</h3>
+                <p className="text-sm text-white/80 mt-1">Submit your application in 2 minutes — name, DOB, phone, address, state, country, ID proof, photo + questions.</p>
+                <div className="mt-3 flex gap-2 text-xs">
+                  <span className="px-2 py-1 rounded-full bg-white/15 flex items-center gap-1"><Check className="h-3 w-3"/> No mock data</span>
+                  <span className="px-2 py-1 rounded-full bg-white/15 flex items-center gap-1"><Timer className="h-3 w-3"/> 2-step apply</span>
+                  <span className="px-2 py-1 rounded-full bg-white/15 flex items-center gap-1"><Target className="h-3 w-3"/> Real DB</span>
+                </div>
+              </div>
+              <div className="flex gap-3 shrink-0">
+                <Link href="/apply"><Button size="lg" className="bg-white text-slate-900 hover:bg-slate-100 gap-2">Apply Now <ArrowRight className="h-4 w-4"/></Button></Link>
+                <Link href="/login"><Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10">Login</Button></Link>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 

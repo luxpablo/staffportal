@@ -146,6 +146,73 @@ export default function StaffPage(){
         </div>
       )}
 
+      {/* Distinct sections — Staff Portal organized by work area */}
+      {!loading && staff.length>0 && (
+        <div className="space-y-6 pt-6 border-t">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white"><Building2 className="h-4 w-4"/></div>
+            <div>
+              <h3 className="font-semibold">Staff by Department — Distinct Sections</h3>
+              <p className="text-xs text-muted-foreground">Each department is a separate work area • Real DB, no mock</p>
+            </div>
+          </div>
+          <div className="grid gap-4">
+            {departments.map((dept:any)=>{
+              const deptStaff = staff.filter((s:any)=> s.department?.name===dept.name);
+              if(deptStaff.length===0) return null;
+              return (
+                <Card key={dept.id} className="overflow-hidden">
+                  <CardContent className="p-0">
+                    <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border-b">
+                      <div className="h-8 w-8 rounded-lg flex items-center justify-center text-white text-xs font-bold" style={{background: dept.color||"#0ea5e9"}}>{dept.name[0]}</div>
+                      <div className="flex-1">
+                        <div className="font-medium text-sm">{dept.name} <Badge variant="secondary" className="ml-2 text-xs">{deptStaff.length}</Badge></div>
+                        <div className="text-xs text-muted-foreground truncate">{dept.description||"Department"}</div>
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={()=> setDeptFilter(dept.id)}>View</Button>
+                    </div>
+                    <div className="p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {deptStaff.slice(0,3).map((s:any)=>(
+                        <div key={s.id} className="flex items-center gap-3 p-3 rounded-xl border bg-white dark:bg-slate-900">
+                          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-slate-800 to-slate-600 flex items-center justify-center text-white text-xs font-bold">{s.name?.[0]}</div>
+                          <div className="flex-1 min-w-0"><div className="text-sm font-medium truncate">{s.name}</div><div className="text-xs text-muted-foreground truncate">{s.role?.name||"STAFF"} • {s.status}</div></div>
+                          <Badge variant={s.status==="Active"?"success":"secondary"} className="text-[10px]">{s.status}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                    {deptStaff.length>3 && <div className="px-4 pb-3 text-xs text-muted-foreground">+ {deptStaff.length-3} more in {dept.name} • <button onClick={()=> setDeptFilter(dept.id)} className="text-primary underline">View all</button></div>}
+                  </CardContent>
+                </Card>
+              );
+            })}
+            {departments.filter((d:any)=> staff.some((s:any)=> s.department?.name===d.name)).length===0 && <div className="text-sm text-muted-foreground py-4 text-center">No department grouping — assign staff to departments to see distinct sections.</div>}
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <Card className="border-emerald-200 dark:border-emerald-900 bg-emerald-50/50 dark:bg-emerald-950/20">
+              <CardContent className="p-4">
+                <div className="font-medium flex items-center gap-2 text-emerald-700 dark:text-emerald-300"><UserCheck className="h-4 w-4"/> Active Staff Section</div>
+                <div className="text-xs text-muted-foreground mt-1">{activeCount} members currently active • Status = Active</div>
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {staff.filter((s:any)=> s.status==="Active").slice(0,4).map((s:any)=> <Badge key={s.id} variant="success" className="gap-1"><span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse"/>{s.name.split(" ")[0]}</Badge>)}
+                  {activeCount===0 && <span className="text-xs text-muted-foreground">No active staff</span>}
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30">
+              <CardContent className="p-4">
+                <div className="font-medium flex items-center gap-2"><UserX className="h-4 w-4"/> Offline Staff Section</div>
+                <div className="text-xs text-muted-foreground mt-1">{offlineCount} members offline • On Leave / Suspended / Inactive</div>
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {staff.filter((s:any)=> s.status!=="Active").slice(0,4).map((s:any)=> <Badge key={s.id} variant="secondary" className="gap-1">{s.name.split(" ")[0]} • {s.status}</Badge>)}
+                  {offlineCount===0 && <span className="text-xs text-muted-foreground">Everyone is online 🎉</span>}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
+
       {showAdd && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn" onClick={()=> setShowAdd(false)}>
           <form onSubmit={createStaff} onClick={e=> e.stopPropagation()} className="w-full max-w-lg rounded-2xl bg-white dark:bg-slate-900 p-6 space-y-4 shadow-2xl animate-scaleIn">

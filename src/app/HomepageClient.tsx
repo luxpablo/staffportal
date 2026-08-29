@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Users, UserCheck, UserX, Building2, Activity, ArrowRight, Shield, Search, LayoutDashboard, LogIn, Sparkles, Clock, Zap, BarChart3, Lock, Workflow, Star, Quote, Check, Timer, Layers, Globe, Award, Target, FileCheck } from "lucide-react";
+import { Users, UserCheck, UserX, Building2, Activity, ArrowRight, Shield, Search, LayoutDashboard, LogIn, Sparkles, Clock, Zap, BarChart3, Lock, Workflow, Star, Quote, Check, Timer, Layers, Globe, Award, Target, FileCheck, Crown, Code, Briefcase, UserCog } from "lucide-react";
 
 type Staff = {
   id:string; name:string; email:string; username:string; employeeId:string; status:string;
@@ -245,6 +245,63 @@ export default function HomepageClient(){
             )}
           </div>
 
+        </div>
+      </section>
+
+      {/* Leadership & Technical — distinct areas */}
+      <section className="py-10 bg-white dark:bg-slate-900 border-y">
+        <div className="max-w-7xl mx-auto px-4 lg:px-6">
+          <div className="text-center max-w-2xl mx-auto mb-8">
+            <Badge variant="outline" className="gap-2 mb-3"><Crown className="h-3 w-3 text-amber-500"/> Leadership & Technical</Badge>
+            <h2 className="text-3xl font-bold tracking-tight">Different area for every role</h2>
+            <p className="text-sm text-muted-foreground mt-2">Founder • Co-founder • CEO • Manager • Technical Department — each is a separate work area with its own staff, tasks and clear ownership. Real DB, no mock.</p>
+          </div>
+
+          {(() => {
+            const founder = staff.filter(s=> ["SUPER_ADMIN","FOUNDER"].includes((s.role?.name||"").toUpperCase()));
+            const coFounder = staff.filter(s=> ["CO_FOUNDER","CO-FOUNDER"].includes((s.role?.name||"").toUpperCase()));
+            const ceo = staff.filter(s=> ["CEO","ADMIN"].includes((s.role?.name||"").toUpperCase()) && !founder.includes(s) && !coFounder.includes(s));
+            const managers = staff.filter(s=> ["MANAGER","HR_MANAGER","TEAM_LEAD"].includes((s.role?.name||"").toUpperCase()));
+            const technical = staff.filter(s=> ["Technical","Development","Infrastructure","Design"].includes(s.department?.name||""));
+            const groups = [
+              { key:"founder", title:"Founder", icon:Crown, color:"from-amber-500 to-yellow-600", bg:"bg-amber-50 dark:bg-amber-950/20", border:"border-amber-200 dark:border-amber-900", desc:"Vision & ownership", data:founder, empty:"No founder assigned yet — assign SUPER_ADMIN to Founder role" },
+              { key:"cofounder", title:"Co-founder", icon:Award, color:"from-slate-600 to-slate-800", bg:"bg-slate-50 dark:bg-slate-800/50", border:"border-slate-200 dark:border-slate-700", desc:"Co-leadership", data:coFounder, empty:"No co-founder yet" },
+              { key:"ceo", title:"CEO", icon:Building2, color:"from-blue-600 to-indigo-600", bg:"bg-blue-50 dark:bg-blue-950/20", border:"border-blue-200 dark:border-blue-900", desc:"Executive leadership", data:ceo, empty:"No CEO assigned — create ADMIN/CEO role" },
+              { key:"manager", title:"Manager", icon:Briefcase, color:"from-emerald-500 to-teal-600", bg:"bg-emerald-50 dark:bg-emerald-950/20", border:"border-emerald-200 dark:border-emerald-900", desc:"Team management", data:managers, empty:"No managers yet" },
+              { key:"technical", title:"Technical Department", icon:Code, color:"from-violet-600 to-indigo-600", bg:"bg-violet-50 dark:bg-violet-950/20", border:"border-violet-200 dark:border-violet-900", desc:"Engineering & infra", data:technical, empty:"No technical staff — add to Development/Infrastructure" },
+            ];
+            return (
+              <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-4">
+                {groups.map(g=> (
+                  <Card key={g.key} className={`${g.bg} ${g.border} border-2 overflow-hidden card-hover`}>
+                    <CardContent className="p-4">
+                      <div className={`h-10 w-10 rounded-xl bg-gradient-to-br ${g.color} flex items-center justify-center text-white mb-3`}><g.icon className="h-5 w-5"/></div>
+                      <div className="font-semibold text-sm flex items-center gap-2">{g.title} <Badge variant="secondary" className="text-[10px]">{g.data.length}</Badge></div>
+                      <div className="text-xs text-muted-foreground">{g.desc}</div>
+                      <div className="mt-3 space-y-2 min-h-[140px]">
+                        {g.data.length===0 ? (
+                          <div className="text-xs text-muted-foreground py-6 text-center border-2 border-dashed rounded-xl bg-white/50 dark:bg-slate-900/50">{g.empty}</div>
+                        ) : g.data.slice(0,3).map((s:Staff)=>(
+                          <div key={s.id} className="flex items-center gap-2 p-2 rounded-xl bg-white dark:bg-slate-900 border shadow-soft">
+                            <div className={`h-8 w-8 rounded-lg bg-gradient-to-br ${g.color} flex items-center justify-center text-white text-xs font-bold`}>{s.name[0]}</div>
+                            <div className="flex-1 min-w-0"><div className="text-xs font-medium truncate">{s.name}</div><div className="text-[11px] text-muted-foreground truncate">{s.role?.name||"—"} • {s.department?.name||"—"}</div></div>
+                            <span className={`h-2 w-2 rounded-full ${s.status==="Active"?"bg-emerald-500 animate-pulse":"bg-slate-300"}`} title={s.status}/>
+                          </div>
+                        ))}
+                        {g.data.length>3 && <div className="text-xs text-center text-muted-foreground">+{g.data.length-3} more • <Link href="/staff" className="text-primary underline">View all</Link></div>}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            );
+          })()}
+
+          <div className="mt-6 flex flex-wrap justify-center gap-2">
+            <Link href="/staff"><Button size="sm" variant="outline" className="gap-2"><Users className="h-4 w-4"/> Manage Staff</Button></Link>
+            <Link href="/departments"><Button size="sm" variant="outline" className="gap-2"><Building2 className="h-4 w-4"/> Departments</Button></Link>
+            <Link href="/applications"><Button size="sm" className="gap-2 bg-slate-900 text-white dark:bg-white dark:text-slate-900">View Applications <ArrowRight className="h-4 w-4"/></Button></Link>
+          </div>
         </div>
       </section>
 

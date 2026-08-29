@@ -469,10 +469,70 @@ model UserNotificationPreference {
   @@index([userId])
 }
 
-// Extend User with notification prefs relation — added via fields below, keep existing User
-// Need to add relation on User model manually: add line to User model
-// (Prisma requires relation field on User — we patch User below)
+// STAFF APPLICATION SYSTEM — 2-step: personal details (name, DOB, phone, address, state, country, identity proof, photo) + questions
+model StaffApplication {
+  id          String   @id @default(cuid())
+  applicationId String @unique // APP-2026-0001
+  // Step 1: Personal Details
+  name        String
+  email       String
+  dob         DateTime @db.Date
+  phone       String
+  address     String   @db.Text // full street address
+  city        String?
+  state       String
+  country     String
+  pincode     String?
+  identityType String // e.g. Aadhaar, Passport, Driving License, PAN, Voter ID
+  identityNumber String
+  identityProofUrl String @db.Text // uploaded file URL
+  identityProofName String?
+  photoUrl    String   @db.Text // uploaded photo URL
+  photoName   String?
+  // Step 2: Answers (JSON + relation for queryability)
+  answers     StaffApplicationAnswer[]
+  // Meta
+  status      String   @default("Pending") // Pending, Under Review, Approved, Rejected, Withdrawn
+  reviewedBy  String?
+  reviewedAt  DateTime?
+  reviewNotes String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
+  @@index([status])
+  @@index([email])
+  @@index([createdAt])
+}
+
+model ApplicationQuestion {
+  id          String   @id @default(cuid())
+  question    String   @db.Text
+  helpText    String?  @db.Text
+  type        String   @default("textarea") // text, textarea, select, radio, checkbox
+  options     String[] @default([]) // for select/radio/checkbox
+  isRequired  Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  answers     StaffApplicationAnswer[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
+model StaffApplicationAnswer {
+  id              String   @id @default(cuid())
+  applicationId   String
+  application     StaffApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  questionId      String
+  question        ApplicationQuestion @relation(fields: [questionId], references: [id])
+  answer          String   @db.Text
+
+  @@unique([applicationId, questionId])
+  @@index([applicationId])
+}
+
+// Extend relation back to ApplicationQuestion
 // AUDIT & INTEGRATIONS
 model AuditLog {
   id        String   @id @default(cuid())

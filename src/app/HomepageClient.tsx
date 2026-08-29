@@ -94,8 +94,10 @@ export default function HomepageClient(){
             <a href="#team" className="hover:text-white">Team</a>
             <a href="#active" className="hover:text-white">Active</a>
             <a href="#offline" className="hover:text-white">Offline</a>
+            <Link href="/apply" className="hover:text-white">Apply</Link>
           </nav>
           <div className="flex items-center gap-2">
+            <Link href="/apply"><Button variant="ghost" size="sm" className="text-white hover:bg-white/10 border border-white/20 hidden sm:flex">Apply Now</Button></Link>
             <Link href="/login"><Button variant="ghost" size="sm" className="text-white hover:bg-white/10 gap-2"><LogIn className="h-4 w-4"/> Login</Button></Link>
             <Link href="/dashboard"><Button size="sm" className="bg-white text-slate-900 hover:bg-slate-100 gap-2">Dashboard <ArrowRight className="h-4 w-4"/></Button></Link>
           </div>
@@ -116,6 +118,7 @@ export default function HomepageClient(){
                 Premium SaaS homepage for Zyphron Cloud — see <span className="text-white font-medium">Active Staff</span>, <span className="text-white font-medium">Offline Staff</span> and the <span className="text-white font-medium">Whole Team</span> in real time. 100% database-driven, no mock data.
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
+                <Link href="/apply"><Button size="lg" className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-0 hover:from-blue-700 hover:to-indigo-700">Apply Now <ArrowRight className="h-4 w-4"/></Button></Link>
                 <Link href="/dashboard"><Button size="lg" className="gap-2 bg-white text-slate-900 hover:bg-slate-100">Open Dashboard <ArrowRight className="h-4 w-4"/></Button></Link>
                 <Link href="/staff"><Button size="lg" variant="outline" className="bg-transparent border-white/20 text-white hover:bg-white/10 gap-2"><Users className="h-4 w-4"/> View Staff</Button></Link>
               </div>

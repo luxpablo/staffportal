@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, LayoutDashboard, Users, Building2, ClipboardList, Kanban, Wallet, Ticket, BarChart3, CalendarCheck, CalendarDays, Megaphone, FileText, ScrollText, Settings, Plug, Briefcase, Mail, ShieldCheck, FileCheck, Layers, Sparkles, Crown, Award, Code } from "lucide-react";
+import { Home, LayoutDashboard, Users, Building2, ClipboardList, Kanban, Wallet, Ticket, BarChart3, CalendarCheck, CalendarDays, Megaphone, FileText, ScrollText, Settings, Plug, Briefcase, Mail, ShieldCheck, FileCheck, Layers, Sparkles, Crown, Award, Code, Hash, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type NavItem = { href:string; label:string; icon:any; badge?:string };
@@ -45,6 +45,16 @@ const sections: NavSection[] = [
     ],
   },
   {
+    title: "Communication",
+    icon: MessageCircle,
+    color: "text-violet-600",
+    items: [
+      { href: "/channels", label: "Channels", icon: Hash, badge: "New" },
+      { href: "/channels?dm=1", label: "Direct Messages", icon: MessageCircle },
+      { href: "/announcements", label: "Announcements", icon: Megaphone },
+    ],
+  },
+  {
     title: "Work",
     icon: Briefcase,
     color: "text-amber-600",
@@ -53,7 +63,6 @@ const sections: NavSection[] = [
       { href: "/tasks/board", label: "Kanban Board", icon: Kanban },
       { href: "/my-work", label: "My Work", icon: Briefcase },
       { href: "/tickets", label: "Tickets", icon: Ticket },
-      { href: "/announcements", label: "Announcements", icon: Megaphone },
     ],
   },
   {

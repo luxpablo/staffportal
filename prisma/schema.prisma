@@ -53,6 +53,14 @@ model User {
   talkRequestsReceived TalkRequest[] @relation("TalkTarget")
   workRequestsSent     WorkRequest[] @relation("WorkRequester")
   workRequestsReceived WorkRequest[] @relation("WorkTarget")
+  channelMembers   ChannelMember[]
+  createdChannels  Channel[] @relation("ChannelCreator")
+  messages         Message[] @relation("MessageAuthor")
+  reactions        Reaction[]
+  conversationMembers ConversationMember[]
+  createdConversations Conversation[] @relation("ConversationCreator")
+  directMessages   DirectMessage[] @relation("DirectMessageAuthor")
+  directMessageReactions DirectMessageReaction[]
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -113,6 +121,7 @@ model Department {
   isActive    Boolean  @default(true)
   members     User[]
   tasks       Task[]
+  channels    Channel[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -591,7 +600,160 @@ model WorkRequest {
   @@index([requesterId])
 }
 
-// Extend User with workspace relations
+// CHANNELS & MESSAGING — Slack/Discord-style (Phase 1)
+model Channel {
+  id          String   @id @default(cuid())
+  name        String // #general, lowercase, no spaces
+  slug        String? // optional
+  description String? @db.Text
+  type        String   @default("PUBLIC") // PUBLIC, PRIVATE, ANNOUNCEMENT, PROJECT, SUPPORT, MANAGEMENT, VOICE, MEETING, DIRECT
+  workspaceId String? // founder, ceo, manager, technical, etc.
+  departmentId String?
+  department  Department? @relation(fields: [departmentId], references: [id])
+  createdById String
+  createdBy   User     @relation("ChannelCreator", fields: [createdById], references: [id])
+  isPrivate   Boolean  @default(false)
+  isArchived  Boolean  @default(false)
+  topic       String?  @db.Text
+  members     ChannelMember[]
+  messages    Message[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([name, workspaceId])
+  @@index([type])
+  @@index([departmentId])
+  @@index([workspaceId])
+  @@index([isPrivate])
+}
+
+model ChannelMember {
+  id                   String    @id @default(cuid())
+  channelId            String
+  channel              Channel   @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  userId               String
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role                 String    @default("MEMBER") // OWNER, ADMIN, MEMBER
+  joinedAt             DateTime  @default(now())
+  lastReadAt           DateTime?
+  notificationsEnabled Boolean   @default(true)
+
+  @@unique([channelId, userId])
+  @@index([userId])
+  @@index([channelId])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  channelId String
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation("MessageAuthor", fields: [authorId], references: [id])
+  content   String   @db.Text
+  type      String   @default("TEXT") // TEXT, SYSTEM, FILE, IMAGE, AUDIO, VIDEO
+  replyToId String?
+  replyTo   Message? @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies   Message[] @relation("MessageReplies")
+  editedAt  DateTime?
+  deletedAt DateTime?
+  isPinned  Boolean  @default(false)
+  pinnedById String?
+  reactions Reaction[]
+  attachments MessageAttachment[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([channelId, createdAt])
+  @@index([authorId])
+  @@index([replyToId])
+}
+
+model Reaction {
+  id        String   @id @default(cuid())
+  messageId String
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emoji     String
+  createdAt DateTime @default(now())
+
+  @@unique([messageId, userId, emoji])
+  @@index([messageId])
+}
+
+model MessageAttachment {
+  id        String   @id @default(cuid())
+  messageId String
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  fileName  String
+  fileUrl   String
+  fileSize  Int
+  mimeType  String
+  createdAt DateTime @default(now())
+}
+
+model Conversation {
+  id          String   @id @default(cuid())
+  type        String   @default("DIRECT") // DIRECT, GROUP
+  name        String? // for group DM
+  createdById String
+  createdBy   User     @relation("ConversationCreator", fields: [createdById], references: [id])
+  members     ConversationMember[]
+  messages    DirectMessage[]
+  isArchived  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([type])
+}
+
+model ConversationMember {
+  id             String   @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt       DateTime @default(now())
+  lastReadAt     DateTime?
+  role           String   @default("MEMBER")
+  notificationsEnabled Boolean @default(true)
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+}
+
+model DirectMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  authorId       String
+  author         User     @relation("DirectMessageAuthor", fields: [authorId], references: [id])
+  content        String   @db.Text
+  type           String   @default("TEXT")
+  replyToId      String?
+  editedAt       DateTime?
+  deletedAt      DateTime?
+  reactions      DirectMessageReaction[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([conversationId, createdAt])
+  @@index([authorId])
+}
+
+model DirectMessageReaction {
+  id        String   @id @default(cuid())
+  messageId String
+  message   DirectMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  emoji     String
+  createdAt DateTime @default(now())
+
+  @@unique([messageId, userId, emoji])
+  @@index([messageId])
+}
+
 // AUDIT & INTEGRATIONS
 model AuditLog {
   id        String   @id @default(cuid())

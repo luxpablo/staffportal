@@ -47,6 +47,12 @@ model User {
   createdAnnouncements Announcement[]
   sessions         Session[]
   notificationPrefs UserNotificationPreference[]
+  sentMessages     ChatMessage[] @relation("ChatSender")
+  receivedMessages ChatMessage[] @relation("ChatRecipient")
+  talkRequestsSent     TalkRequest[] @relation("TalkRequester")
+  talkRequestsReceived TalkRequest[] @relation("TalkTarget")
+  workRequestsSent     WorkRequest[] @relation("WorkRequester")
+  workRequestsReceived WorkRequest[] @relation("WorkTarget")
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -532,7 +538,60 @@ model StaffApplicationAnswer {
   @@index([applicationId])
 }
 
-// Extend relation back to ApplicationQuestion
+// WORKSPACE — Chat, Talk Requests, Work Requests (hierarchical: Founder > Co-founder > CEO > Manager > Technical)
+model ChatMessage {
+  id        String   @id @default(cuid())
+  senderId  String
+  sender    User     @relation("ChatSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipientId String
+  recipient User     @relation("ChatRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  content   String   @db.Text
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([senderId, recipientId])
+  @@index([recipientId, isRead])
+  @@index([createdAt])
+}
+
+model TalkRequest {
+  id          String   @id @default(cuid())
+  requesterId String
+  requester   User     @relation("TalkRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  targetId    String
+  target      User     @relation("TalkTarget", fields: [targetId], references: [id], onDelete: Cascade)
+  targetRole  String   // Founder, Co-founder, CEO, Manager, Technical
+  reason      String   @db.Text
+  preferredTime String?
+  status      String   @default("Pending") // Pending, Accepted, Rejected, Completed
+  response    String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([targetId, status])
+  @@index([requesterId])
+}
+
+model WorkRequest {
+  id          String   @id @default(cuid())
+  requesterId String
+  requester   User     @relation("WorkRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  targetId    String
+  target      User     @relation("WorkTarget", fields: [targetId], references: [id], onDelete: Cascade)
+  targetRole  String
+  title       String
+  description String   @db.Text
+  priority    String   @default("Medium") // Low, Medium, High, Urgent
+  deadline    DateTime?
+  status      String   @default("Pending") // Pending, Accepted, Rejected, In Progress, Completed
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([targetId, status])
+  @@index([requesterId])
+}
+
+// Extend User with workspace relations
 // AUDIT & INTEGRATIONS
 model AuditLog {
   id        String   @id @default(cuid())

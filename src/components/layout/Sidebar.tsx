@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, LayoutDashboard, Users, Building2, ClipboardList, Kanban, Wallet, Ticket, BarChart3, CalendarCheck, CalendarDays, Megaphone, FileText, ScrollText, Settings, Plug, Briefcase, Mail, ShieldCheck, FileCheck, Layers, Sparkles, Crown } from "lucide-react";
+import { Home, LayoutDashboard, Users, Building2, ClipboardList, Kanban, Wallet, Ticket, BarChart3, CalendarCheck, CalendarDays, Megaphone, FileText, ScrollText, Settings, Plug, Briefcase, Mail, ShieldCheck, FileCheck, Layers, Sparkles, Crown, Award, Code } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type NavItem = { href:string; label:string; icon:any; badge?:string };
@@ -30,6 +30,18 @@ const sections: NavSection[] = [
       { href: "/attendance", label: "Attendance", icon: CalendarCheck },
       { href: "/leave", label: "Leave", icon: CalendarDays },
       { href: "/performance", label: "Performance", icon: BarChart3 },
+    ],
+  },
+  {
+    title: "Workspaces",
+    icon: Crown,
+    color: "text-amber-600",
+    items: [
+      { href: "/workspace/founder", label: "Founder", icon: Crown },
+      { href: "/workspace/co-founder", label: "Co-founder", icon: Award },
+      { href: "/workspace/ceo", label: "CEO", icon: Building2 },
+      { href: "/workspace/manager", label: "Manager", icon: Briefcase },
+      { href: "/workspace/technical", label: "Technical", icon: Code },
     ],
   },
   {

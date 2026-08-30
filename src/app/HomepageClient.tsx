@@ -264,34 +264,37 @@ export default function HomepageClient(){
             const managers = staff.filter(s=> ["MANAGER","HR_MANAGER","TEAM_LEAD"].includes((s.role?.name||"").toUpperCase()));
             const technical = staff.filter(s=> ["Technical","Development","Infrastructure","Design"].includes(s.department?.name||""));
             const groups = [
-              { key:"founder", title:"Founder", icon:Crown, color:"from-amber-500 to-yellow-600", bg:"bg-amber-50 dark:bg-amber-950/20", border:"border-amber-200 dark:border-amber-900", desc:"Vision & ownership", data:founder, empty:"No founder assigned yet — assign SUPER_ADMIN to Founder role" },
-              { key:"cofounder", title:"Co-founder", icon:Award, color:"from-slate-600 to-slate-800", bg:"bg-slate-50 dark:bg-slate-800/50", border:"border-slate-200 dark:border-slate-700", desc:"Co-leadership", data:coFounder, empty:"No co-founder yet" },
-              { key:"ceo", title:"CEO", icon:Building2, color:"from-blue-600 to-indigo-600", bg:"bg-blue-50 dark:bg-blue-950/20", border:"border-blue-200 dark:border-blue-900", desc:"Executive leadership", data:ceo, empty:"No CEO assigned — create ADMIN/CEO role" },
-              { key:"manager", title:"Manager", icon:Briefcase, color:"from-emerald-500 to-teal-600", bg:"bg-emerald-50 dark:bg-emerald-950/20", border:"border-emerald-200 dark:border-emerald-900", desc:"Team management", data:managers, empty:"No managers yet" },
-              { key:"technical", title:"Technical Department", icon:Code, color:"from-violet-600 to-indigo-600", bg:"bg-violet-50 dark:bg-violet-950/20", border:"border-violet-200 dark:border-violet-900", desc:"Engineering & infra", data:technical, empty:"No technical staff — add to Development/Infrastructure" },
+              { key:"founder", href:"/workspace/founder", title:"Founder", icon:Crown, color:"from-amber-500 to-yellow-600", bg:"bg-amber-50 dark:bg-amber-950/20", border:"border-amber-200 dark:border-amber-900", desc:"Vision & ownership", data:founder, empty:"No founder assigned yet — assign SUPER_ADMIN to Founder role" },
+              { key:"co-founder", href:"/workspace/co-founder", title:"Co-founder", icon:Award, color:"from-slate-600 to-slate-800", bg:"bg-slate-50 dark:bg-slate-800/50", border:"border-slate-200 dark:border-slate-700", desc:"Co-leadership", data:coFounder, empty:"No co-founder yet" },
+              { key:"ceo", href:"/workspace/ceo", title:"CEO", icon:Building2, color:"from-blue-600 to-indigo-600", bg:"bg-blue-50 dark:bg-blue-950/20", border:"border-blue-200 dark:border-blue-900", desc:"Executive leadership", data:ceo, empty:"No CEO assigned — create ADMIN/CEO role" },
+              { key:"manager", href:"/workspace/manager", title:"Manager", icon:Briefcase, color:"from-emerald-500 to-teal-600", bg:"bg-emerald-50 dark:bg-emerald-950/20", border:"border-emerald-200 dark:border-emerald-900", desc:"Team management", data:managers, empty:"No managers yet" },
+              { key:"technical", href:"/workspace/technical", title:"Technical Department", icon:Code, color:"from-violet-600 to-indigo-600", bg:"bg-violet-50 dark:bg-violet-950/20", border:"border-violet-200 dark:border-violet-900", desc:"Engineering & infra", data:technical, empty:"No technical staff — add to Development/Infrastructure" },
             ];
             return (
               <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-4">
                 {groups.map(g=> (
-                  <Card key={g.key} className={`${g.bg} ${g.border} border-2 overflow-hidden card-hover`}>
-                    <CardContent className="p-4">
-                      <div className={`h-10 w-10 rounded-xl bg-gradient-to-br ${g.color} flex items-center justify-center text-white mb-3`}><g.icon className="h-5 w-5"/></div>
-                      <div className="font-semibold text-sm flex items-center gap-2">{g.title} <Badge variant="secondary" className="text-[10px]">{g.data.length}</Badge></div>
-                      <div className="text-xs text-muted-foreground">{g.desc}</div>
-                      <div className="mt-3 space-y-2 min-h-[140px]">
-                        {g.data.length===0 ? (
-                          <div className="text-xs text-muted-foreground py-6 text-center border-2 border-dashed rounded-xl bg-white/50 dark:bg-slate-900/50">{g.empty}</div>
-                        ) : g.data.slice(0,3).map((s:Staff)=>(
-                          <div key={s.id} className="flex items-center gap-2 p-2 rounded-xl bg-white dark:bg-slate-900 border shadow-soft">
-                            <div className={`h-8 w-8 rounded-lg bg-gradient-to-br ${g.color} flex items-center justify-center text-white text-xs font-bold`}>{s.name[0]}</div>
-                            <div className="flex-1 min-w-0"><div className="text-xs font-medium truncate">{s.name}</div><div className="text-[11px] text-muted-foreground truncate">{s.role?.name||"—"} • {s.department?.name||"—"}</div></div>
-                            <span className={`h-2 w-2 rounded-full ${s.status==="Active"?"bg-emerald-500 animate-pulse":"bg-slate-300"}`} title={s.status}/>
-                          </div>
-                        ))}
-                        {g.data.length>3 && <div className="text-xs text-center text-muted-foreground">+{g.data.length-3} more • <Link href="/staff" className="text-primary underline">View all</Link></div>}
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <Link key={g.key} href={g.href} className="block">
+                    <Card className={`${g.bg} ${g.border} border-2 overflow-hidden card-hover h-full`}>
+                      <CardContent className="p-4">
+                        <div className={`h-10 w-10 rounded-xl bg-gradient-to-br ${g.color} flex items-center justify-center text-white mb-3`}><g.icon className="h-5 w-5"/></div>
+                        <div className="font-semibold text-sm flex items-center gap-2">{g.title} <Badge variant="secondary" className="text-[10px]">{g.data.length}</Badge> <ArrowRight className="h-3 w-3 ml-auto opacity-50"/></div>
+                        <div className="text-xs text-muted-foreground">{g.desc}</div>
+                        <div className="mt-3 space-y-2 min-h-[140px]">
+                          {g.data.length===0 ? (
+                            <div className="text-xs text-muted-foreground py-6 text-center border-2 border-dashed rounded-xl bg-white/50 dark:bg-slate-900/50">{g.empty}</div>
+                          ) : g.data.slice(0,3).map((s:Staff)=>(
+                            <div key={s.id} className="flex items-center gap-2 p-2 rounded-xl bg-white dark:bg-slate-900 border shadow-soft">
+                              <div className={`h-8 w-8 rounded-lg bg-gradient-to-br ${g.color} flex items-center justify-center text-white text-xs font-bold`}>{s.name[0]}</div>
+                              <div className="flex-1 min-w-0"><div className="text-xs font-medium truncate">{s.name}</div><div className="text-[11px] text-muted-foreground truncate">{s.role?.name||"—"} • {s.department?.name||"—"}</div></div>
+                              <span className={`h-2 w-2 rounded-full ${s.status==="Active"?"bg-emerald-500 animate-pulse":"bg-slate-300"}`} title={s.status}/>
+                            </div>
+                          ))}
+                          {g.data.length>3 && <div className="text-xs text-center text-muted-foreground">+{g.data.length-3} more</div>}
+                        </div>
+                        <div className="mt-3 text-xs font-medium text-primary flex items-center gap-1">Open {g.title} Workspace <ArrowRight className="h-3 w-3"/></div>
+                      </CardContent>
+                    </Card>
+                  </Link>
                 ))}
               </div>
             );

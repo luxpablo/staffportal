@@ -38,22 +38,35 @@ export async function POST(req:NextRequest){
 
 export async function PATCH(req:NextRequest){
   try{
-    const { id, status } = await req.json();
+    const { id, status, notes } = await req.json();
     if(!id || !status) return NextResponse.json({error:"id, status required"},{status:400});
-    const row = await prisma.workRequest.update({ where:{ id }, data:{ status }});
-    // If accepted, optionally create a Task
-    if(status==="Accepted"){
+    const allowed = ["Pending","Waiting","Approved","Accepted","Rejected","In Progress","Completed","Assigned Time"];
+    if(!allowed.includes(status)) return NextResponse.json({error:`Invalid status — allowed: ${allowed.join(", ")}`},{status:400});
+    let finalStatus = status;
+    if(status==="Waiting") finalStatus="Pending";
+    if(status==="Accepted"||status==="Approved") finalStatus="Approved";
+    const row = await prisma.workRequest.update({ where:{ id }, data:{ status: finalStatus }});
+    // If approved/accepted, create a Task assigned to target (work to be done BY target)
+    if(finalStatus==="Approved"){
       try{
         const wr = await prisma.workRequest.findUnique({ where:{ id }});
         if(wr){
-          const creator = await prisma.user.findUnique({ where:{ id: wr.requesterId }});
-          const targetUser = await prisma.user.findUnique({ where:{ id: wr.targetId }});
-          // create task assigned to target (who will do the work) or requester? Spec: work to be done BY founder/CEO etc. So assign to target
           const taskId = `ZYP-${Math.floor(100+Math.random()*900)}`;
           const task = await prisma.task.create({
             data:{ taskId, title: wr.title, description: wr.description, priority: wr.priority, status:"Assigned", deadline: wr.deadline, reward:0, createdById: wr.requesterId }
           });
           await prisma.taskAssignment.create({ data:{ taskId: task.id, userId: wr.targetId }});
+          await prisma.notification.create({ data:{ userId: wr.requesterId, title:`Work request approved`, message:`${wr.title} approved — task ${taskId} created`, type:"work_request" }});
+        }
+      }catch{}
+    }
+    if(finalStatus==="Completed"){
+      try{
+        const wr = await prisma.workRequest.findUnique({ where:{ id }});
+        if(wr){
+          // mark related task as completed if exists
+          const task = await prisma.task.findFirst({ where:{ title: wr.title, createdById: wr.requesterId }, orderBy:{ createdAt:"desc" }});
+          if(task) await prisma.task.update({ where:{ id: task.id }, data:{ status:"Completed" }});
         }
       }catch{}
     }

@@ -36,9 +36,26 @@ export async function POST(req:NextRequest){
 
 export async function PATCH(req:NextRequest){
   try{
-    const { id, status, response } = await req.json();
+    const { id, status, response, assignedTime } = await req.json();
     if(!id || !status) return NextResponse.json({error:"id, status required"},{status:400});
-    const row = await prisma.talkRequest.update({ where:{ id }, data:{ status, response: response||null }});
+    const allowed = ["Pending","Waiting","Approved","Assign Time","Assigned Time","Rejected","Completed","Accepted"];
+    if(!allowed.includes(status)) return NextResponse.json({error:`Invalid status — allowed: ${allowed.join(", ")}`},{status:400});
+    // Normalize: Waiting ↔ Pending, Assign Time → Assigned Time
+    let finalStatus = status;
+    if(status==="Waiting") finalStatus="Pending";
+    if(status==="Assign Time") finalStatus="Assigned Time";
+    if(status==="Accepted") finalStatus="Approved";
+    const data:any={ status: finalStatus };
+    if(response) data.response=response;
+    if(assignedTime) data.response=`Assigned Time: ${assignedTime}` + (response? ` — ${response}`:"");
+    // If approved/assigned time, also update with response
+    const row = await prisma.talkRequest.update({ where:{ id }, data });
+    try{
+      const updated = await prisma.talkRequest.findUnique({ where:{ id }, include:{ requester:{select:{name:true}} }});
+      if(updated){
+        await prisma.notification.create({ data:{ userId: updated.requesterId, title:`Talk request ${finalStatus}`, message: `Your talk request to ${updated.targetRole} is ${finalStatus}${assignedTime? ` at ${assignedTime}`:""}`, type:"talk_request_update" }});
+      }
+    }catch{}
     return NextResponse.json({ success:true, data: row });
   }catch(e:any){ return NextResponse.json({error:e.message},{status:500}); }
 }

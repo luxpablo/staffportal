@@ -33,8 +33,9 @@ export default function WorkspacePage(){
   const [chatMessages,setChatMessages]=useState<any[]>([]);
   const [chatInput,setChatInput]=useState("");
   const [giveForm,setGiveForm]=useState({ title:"", description:"", assignTo:"", priority:"Medium", deadline:"", reward:"" });
-  const [talkForm,setTalkForm]=useState({ reason:"", preferredTime:"" });
-  const [workForm,setWorkForm]=useState({ title:"", description:"", priority:"Medium", deadline:"" });
+  const [talkForm,setTalkForm]=useState({ requesterId:"", reason:"", preferredTime:"" });
+  const [workForm,setWorkForm]=useState({ requesterId:"", title:"", description:"", priority:"Medium", deadline:"" });
+  const [assignTimeMap,setAssignTimeMap]=useState<Record<string,string>>({});
 
   // load staff and me
   useEffect(()=>{
@@ -83,31 +84,30 @@ export default function WorkspacePage(){
 
   async function requestTalk(){
     if(!talkForm.reason.trim() || !me) return alert("Reason required");
-    // for demo, request from first other staff to me
-    const requester = staff.find(s=> s.id!==me.id) || staff[0];
-    if(!requester) return alert("No staff to create request from");
-    const res=await fetch("/api/talk-requests",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ requesterId: requester.id, targetId: me.id, targetRole: cfg.title, reason: talkForm.reason, preferredTime: talkForm.preferredTime })});
+    const requesterId = talkForm.requesterId || staff.find(s=> s.id!==me.id)?.id || staff[0]?.id;
+    if(!requesterId) return alert("No staff to create request from — create staff first");
+    const res=await fetch("/api/talk-requests",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ requesterId, targetId: me.id, targetRole: cfg.title, reason: talkForm.reason, preferredTime: talkForm.preferredTime })});
     const j=await res.json();
     if(!res.ok) return alert(j.error);
-    setTalkForm({ reason:"", preferredTime:"" });
+    setTalkForm({ requesterId:"", reason:"", preferredTime:"" });
     loadRequests();
-    alert("Talk request sent to "+cfg.title);
+    alert("Talk request sent to "+cfg.title+" from "+(staff.find(s=>s.id===requesterId)?.name||"")+" — they will see Approved/Assign Time/Reject/Waiting");
   }
 
   async function requestWork(){
     if(!workForm.title.trim() || !me) return alert("Title required");
-    const requester = staff.find(s=> s.id!==me.id) || staff[0];
-    if(!requester) return alert("No staff");
-    const res=await fetch("/api/work-requests",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ requesterId: requester.id, targetId: me.id, targetRole: cfg.title, title: workForm.title, description: workForm.description, priority: workForm.priority, deadline: workForm.deadline||null })});
+    const requesterId = workForm.requesterId || staff.find(s=> s.id!==me.id)?.id || staff[0]?.id;
+    if(!requesterId) return alert("No staff");
+    const res=await fetch("/api/work-requests",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ requesterId, targetId: me.id, targetRole: cfg.title, title: workForm.title, description: workForm.description, priority: workForm.priority, deadline: workForm.deadline||null })});
     const j=await res.json();
     if(!res.ok) return alert(j.error);
-    setWorkForm({ title:"", description:"", priority:"Medium", deadline:"" });
+    setWorkForm({ requesterId:"", title:"", description:"", priority:"Medium", deadline:"" });
     loadRequests();
-    alert("Work request sent to "+cfg.title);
+    alert("Work request sent to "+cfg.title+" — they will see Pending/Approved/Completed/Rejected");
   }
 
-  async function handleTalk(id:string, status:string){
-    await fetch("/api/talk-requests",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({ id, status })});
+  async function handleTalk(id:string, status:string, extra?:string){
+    await fetch("/api/talk-requests",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({ id, status, response: extra, assignedTime: extra })});
     loadRequests();
   }
   async function handleWork(id:string, status:string){
@@ -250,48 +250,90 @@ export default function WorkspacePage(){
         <div className="grid lg:grid-cols-2 gap-6">
           <div className="space-y-4">
             <Card>
-              <CardHeader><CardTitle className="text-base flex items-center gap-2"><Phone className="h-4 w-4 text-blue-600"/> Request to Talk with {cfg.title}</CardTitle><p className="text-xs text-muted-foreground">Anyone can request a talk — appears in {cfg.title} inbox</p></CardHeader>
+              <CardHeader><CardTitle className="text-base flex items-center gap-2"><Phone className="h-4 w-4 text-blue-600"/> Request to Talk with {cfg.title}</CardTitle><p className="text-xs text-muted-foreground">Anyone (not just Founder) can request — {cfg.title} will get Approved / Assign Time / Waiting / Reject / Completed options</p></CardHeader>
               <CardContent className="space-y-3">
+                <div className="space-y-1"><Label>Request as (who is asking?)</Label><select value={talkForm.requesterId} onChange={e=> setTalkForm({...talkForm, requesterId:e.target.value})} className="w-full h-9 rounded-xl border bg-background px-3 text-sm"><option value="">Auto (first other staff)</option>{staff.filter(s=> s.id!==me?.id).map(s=> <option key={s.id} value={s.id}>{s.name} — {s.role?.name} • {s.status}</option>)}</select></div>
                 <div className="space-y-1"><Label>Reason *</Label><Textarea value={talkForm.reason} onChange={e=> setTalkForm({...talkForm, reason:e.target.value})} placeholder="I need to discuss..." rows={3}/></div>
                 <div className="space-y-1"><Label>Preferred time</Label><Input value={talkForm.preferredTime} onChange={e=> setTalkForm({...talkForm, preferredTime:e.target.value})} placeholder="Tomorrow 3pm IST"/></div>
-                <Button onClick={requestTalk} className="w-full gap-2"><Phone className="h-4 w-4"/> Send Talk Request</Button>
+                <Button onClick={requestTalk} className="w-full gap-2"><Phone className="h-4 w-4"/> Send Talk Request to {cfg.title}</Button>
+                <div className="text-xs text-muted-foreground">Target will see: <Badge variant="success" className="text-[10px]">Approved</Badge> <Badge variant="secondary" className="text-[10px]">Assign Time</Badge> <Badge variant="warning" className="text-[10px]">Waiting</Badge> <Badge variant="destructive" className="text-[10px]">Reject</Badge> → Completed</div>
               </CardContent>
             </Card>
             <Card>
-              <CardHeader><CardTitle className="text-base flex items-center gap-2"><FilePlus className="h-4 w-4 text-emerald-600"/> Request Work to be Done by {cfg.title}</CardTitle><p className="text-xs text-muted-foreground">Send a work request — {cfg.title} can accept and it becomes a Task</p></CardHeader>
+              <CardHeader><CardTitle className="text-base flex items-center gap-2"><FilePlus className="h-4 w-4 text-emerald-600"/> Request Work to be Done by {cfg.title}</CardTitle><p className="text-xs text-muted-foreground">Anyone can request work — {cfg.title} will get Pending / Approved / Completed / Rejected (Approved creates Task)</p></CardHeader>
               <CardContent className="space-y-3">
+                <div className="space-y-1"><Label>Request as</Label><select value={workForm.requesterId} onChange={e=> setWorkForm({...workForm, requesterId:e.target.value})} className="w-full h-9 rounded-xl border bg-background px-3 text-sm"><option value="">Auto (first other staff)</option>{staff.filter(s=> s.id!==me?.id).map(s=> <option key={s.id} value={s.id}>{s.name} — {s.role?.name}</option>)}</select></div>
                 <div className="space-y-1"><Label>Title *</Label><Input value={workForm.title} onChange={e=> setWorkForm({...workForm, title:e.target.value})} placeholder="Need help with..." /></div>
                 <div className="space-y-1"><Label>Description *</Label><Textarea value={workForm.description} onChange={e=> setWorkForm({...workForm, description:e.target.value})} rows={3} placeholder="Details..."/></div>
                 <div className="grid grid-cols-2 gap-3"><div className="space-y-1"><Label>Priority</Label><select value={workForm.priority} onChange={e=> setWorkForm({...workForm, priority:e.target.value})} className="w-full h-9 rounded-xl border bg-background px-3 text-sm"><option>Low</option><option>Medium</option><option>High</option><option>Urgent</option></select></div><div className="space-y-1"><Label>Deadline</Label><Input type="date" value={workForm.deadline} onChange={e=> setWorkForm({...workForm, deadline:e.target.value})}/></div></div>
-                <Button onClick={requestWork} className="w-full gap-2"><ClipboardList className="h-4 w-4"/> Send Work Request</Button>
+                <Button onClick={requestWork} className="w-full gap-2"><ClipboardList className="h-4 w-4"/> Send Work Request to {cfg.title}</Button>
+                <div className="text-xs text-muted-foreground">Target will see: <Badge variant="warning" className="text-[10px]">Pending</Badge> <Badge variant="success" className="text-[10px]">Approved</Badge> <Badge variant="success" className="text-[10px]">Completed</Badge> <Badge variant="destructive" className="text-[10px]">Rejected</Badge></div>
               </CardContent>
             </Card>
           </div>
           <div className="space-y-4">
             <Card>
-              <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Phone className="h-4 w-4"/> Inbox — Talk Requests to {cfg.title} <Badge variant="secondary">{talkRequests.length}</Badge></CardTitle></CardHeader>
-              <CardContent className="space-y-2 max-h-[320px] overflow-y-auto">
-                {talkRequests.length===0 ? <div className="text-sm text-muted-foreground py-6 text-center">No talk requests yet</div> : talkRequests.map((r:any)=>(
-                  <div key={r.id} className="p-3 rounded-xl border">
-                    <div className="flex justify-between"><span className="text-sm font-medium">{r.requester?.name}</span><Badge variant={r.status==="Pending"?"warning": r.status==="Accepted"?"success":"secondary"}>{r.status}</Badge></div>
-                    <div className="text-xs text-muted-foreground mt-1">{r.reason}</div>
+              <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Phone className="h-4 w-4"/> Inbox — Talk Requests to {cfg.title} <Badge variant="secondary">{talkRequests.length}</Badge></CardTitle><p className="text-xs text-muted-foreground">Anyone can request to talk with {cfg.title} — you get Approved / Assign Time / Waiting / Reject / Completed options</p></CardHeader>
+              <CardContent className="space-y-3 max-h-[420px] overflow-y-auto">
+                {talkRequests.length===0 ? <div className="text-sm text-muted-foreground py-8 text-center border-2 border-dashed rounded-xl">No talk requests yet — others will request here.</div> : talkRequests.map((r:any)=>{
+                  const badgeVariant = r.status==="Approved"?"success" : r.status==="Assigned Time"?"success" : r.status==="Waiting"?"warning" : r.status==="Pending"?"warning" : r.status==="Rejected"?"destructive" : r.status==="Completed"?"success":"secondary";
+                  return (
+                  <div key={r.id} className="p-3 rounded-xl border bg-white dark:bg-slate-900">
+                    <div className="flex justify-between items-start gap-2"><span className="text-sm font-medium">{r.requester?.name} <span className="text-xs text-muted-foreground">→ {r.target?.name||cfg.title}</span></span><Badge variant={badgeVariant as any}>{r.status}</Badge></div>
+                    <div className="text-xs text-muted-foreground mt-1"><span className="font-medium text-foreground">Reason:</span> {r.reason}</div>
                     <div className="text-xs text-muted-foreground">Preferred: {r.preferredTime||"—"} • {new Date(r.createdAt).toLocaleString("en-IN")}</div>
-                    {r.status==="Pending" && <div className="flex gap-2 mt-2"><Button size="sm" onClick={()=> handleTalk(r.id,"Accepted")} className="gap-1 bg-emerald-600"><CheckCircle className="h-4 w-4"/> Accept</Button><Button size="sm" variant="outline" onClick={()=> handleTalk(r.id,"Rejected")} className="gap-1"><XCircle className="h-4 w-4"/> Reject</Button></div>}
+                    {r.response && <div className="text-xs mt-1 p-2 rounded bg-slate-50 dark:bg-slate-800"><span className="font-medium">Response:</span> {r.response}</div>}
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {(r.status==="Pending"||r.status==="Waiting") && (
+                        <>
+                          <Button size="sm" onClick={()=> handleTalk(r.id,"Approved")} className="gap-1 bg-emerald-600 hover:bg-emerald-700"><CheckCircle className="h-3 w-3"/> Approved</Button>
+                          <Button size="sm" variant="outline" onClick={()=>{
+                            const t=assignTimeMap[r.id]||prompt("Assign time (e.g. Tomorrow 3pm IST)");
+                            if(t) handleTalk(r.id,"Assign Time", t);
+                          }} className="gap-1"><Clock className="h-3 w-3"/> Assign Time</Button>
+                          <Button size="sm" variant="outline" onClick={()=> handleTalk(r.id,"Waiting")} className="gap-1">Waiting</Button>
+                          <Button size="sm" variant="destructive" onClick={()=> handleTalk(r.id,"Rejected")} className="gap-1"><XCircle className="h-3 w-3"/> Reject</Button>
+                        </>
+                      )}
+                      {r.status==="Approved" && <Button size="sm" onClick={()=> handleTalk(r.id,"Completed")} className="gap-1">Mark Completed</Button>}
+                      {r.status==="Assigned Time" && <><Button size="sm" onClick={()=> handleTalk(r.id,"Approved")} className="gap-1">Confirm Approved</Button><Button size="sm" variant="outline" onClick={()=> handleTalk(r.id,"Rejected")}>Reject</Button></>}
+                      {r.status==="Rejected" && <span className="text-xs text-muted-foreground">Rejected — no further action</span>}
+                      {r.status==="Completed" && <Badge variant="success" className="gap-1"><CheckCircle className="h-3 w-3"/> Completed</Badge>}
+                    </div>
+                    {(r.status==="Pending"||r.status==="Waiting") && (
+                      <div className="mt-2 flex gap-2">
+                        <Input placeholder="Assign time e.g. 2026-09-01 15:00" value={assignTimeMap[r.id]||""} onChange={e=> setAssignTimeMap({...assignTimeMap, [r.id]:e.target.value})} className="h-8 text-xs flex-1" />
+                      </div>
+                    )}
                   </div>
-                ))}
+                )})}
               </CardContent>
             </Card>
             <Card>
-              <CardHeader><CardTitle className="text-sm flex items-center gap-2"><ClipboardList className="h-4 w-4"/> Inbox — Work Requests <Badge variant="secondary">{workRequests.length}</Badge></CardTitle></CardHeader>
-              <CardContent className="space-y-2 max-h-[320px] overflow-y-auto">
-                {workRequests.length===0 ? <div className="text-sm text-muted-foreground py-6 text-center">No work requests yet</div> : workRequests.map((r:any)=>(
-                  <div key={r.id} className="p-3 rounded-xl border">
-                    <div className="flex justify-between"><span className="text-sm font-medium">{r.title}</span><Badge variant={r.status==="Pending"?"warning": r.status==="Accepted"?"success":"secondary"}>{r.status}</Badge></div>
-                    <div className="text-xs text-muted-foreground">{r.description}</div>
-                    <div className="text-xs text-muted-foreground mt-1">{r.requester?.name} • {r.priority} • {r.deadline? new Date(r.deadline).toLocaleDateString("en-IN"):"No deadline"}</div>
-                    {r.status==="Pending" && <div className="flex gap-2 mt-2"><Button size="sm" onClick={()=> handleWork(r.id,"Accepted")} className="gap-1 bg-emerald-600"><CheckCircle className="h-4 w-4"/> Accept → Creates Task</Button><Button size="sm" variant="outline" onClick={()=> handleWork(r.id,"Rejected")}><XCircle className="h-4 w-4"/> Reject</Button></div>}
+              <CardHeader><CardTitle className="text-sm flex items-center gap-2"><ClipboardList className="h-4 w-4"/> Inbox — Work Requests to {cfg.title} <Badge variant="secondary">{workRequests.length}</Badge></CardTitle><p className="text-xs text-muted-foreground">Anyone can request work to be done by {cfg.title} — you get Pending / Approved / Completed / Rejected options (Approved creates Task)</p></CardHeader>
+              <CardContent className="space-y-3 max-h-[420px] overflow-y-auto">
+                {workRequests.length===0 ? <div className="text-sm text-muted-foreground py-8 text-center border-2 border-dashed rounded-xl">No work requests yet — others will request work here.</div> : workRequests.map((r:any)=>{
+                  const badgeVariant = r.status==="Approved"?"success" : r.status==="Completed"?"success" : r.status==="Pending"?"warning" : r.status==="Waiting"?"warning" : r.status==="Rejected"?"destructive":"secondary";
+                  return (
+                  <div key={r.id} className="p-3 rounded-xl border bg-white dark:bg-slate-900">
+                    <div className="flex justify-between items-start gap-2"><span className="text-sm font-medium truncate">{r.title}</span><Badge variant={badgeVariant as any}>{r.status}</Badge></div>
+                    <div className="text-xs text-muted-foreground mt-1">{r.description}</div>
+                    <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-2"><span>{r.requester?.name} → {r.target?.name||cfg.title}</span>•<span>{r.priority}</span>•<span>{r.deadline? new Date(r.deadline).toLocaleDateString("en-IN"):"No deadline"}</span>•<span>{new Date(r.createdAt).toLocaleString("en-IN")}</span></div>
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {(r.status==="Pending"||r.status==="Waiting") && (
+                        <>
+                          <Button size="sm" onClick={()=> handleWork(r.id,"Approved")} className="gap-1 bg-emerald-600 hover:bg-emerald-700"><CheckCircle className="h-3 w-3"/> Approved</Button>
+                          <Button size="sm" variant="outline" onClick={()=> handleWork(r.id,"Waiting")} className="gap-1">Waiting</Button>
+                          <Button size="sm" variant="destructive" onClick={()=> handleWork(r.id,"Rejected")} className="gap-1"><XCircle className="h-3 w-3"/> Rejected</Button>
+                        </>
+                      )}
+                      {r.status==="Approved" && <><Button size="sm" onClick={()=> handleWork(r.id,"Completed")} className="gap-1 bg-blue-600 hover:bg-blue-700">Mark Completed</Button><Button size="sm" variant="outline" onClick={()=> handleWork(r.id,"In Progress")}>In Progress</Button></>}
+                      {r.status==="In Progress" && <Button size="sm" onClick={()=> handleWork(r.id,"Completed")} className="gap-1">Completed</Button>}
+                      {r.status==="Completed" && <Badge variant="success" className="gap-1"><CheckCircle className="h-3 w-3"/> Completed</Badge>}
+                      {r.status==="Rejected" && <span className="text-xs text-muted-foreground">Rejected</span>}
+                    </div>
                   </div>
-                ))}
+                )})}
               </CardContent>
             </Card>
           </div>

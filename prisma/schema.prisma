@@ -64,6 +64,17 @@ model User {
   hostedMeetings   Meeting[] @relation("MeetingHost")
   meetingParticipants MeetingParticipant[]
   calendarEvents   CalendarEvent[]
+  files            File[] @relation("FileUploader")
+  fileVersions     FileVersion[] @relation("FileVersionUploader")
+  folders          Folder[] @relation("FolderOwner")
+  ownedDocuments   Document[] @relation("DocumentOwner")
+  documentVersions DocumentVersion[] @relation("DocumentVersionCreator")
+  documentPermissions DocumentPermission[]
+  grantedPermissions DocumentPermission[] @relation("PermissionGranter")
+  documentComments DocumentComment[]
+  shareLinks       ShareLink[]
+  favorites        Favorite[]
+  recentlyViewed   RecentlyViewed[]
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -127,6 +138,9 @@ model Department {
   channels    Channel[]
   meetings    Meeting[]
   calendarEvents CalendarEvent[]
+  files       File[]
+  folders     Folder[]
+  documents   Document[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -850,6 +864,241 @@ model CalendarEvent {
   @@index([departmentId])
   @@index([workspaceId])
   @@index([meetingId])
+}
+
+// FILES & WIKI — Phase 3 (Secure Documents, Files, Knowledge Base)
+model File {
+  id           String   @id @default(cuid())
+  name         String
+  originalName String
+  mimeType     String
+  extension    String?
+  size         Int
+  storageKey   String   @unique // organizations/org123/files/uuid — never original name
+  checksum     String?
+  uploadedById String
+  uploadedBy   User     @relation("FileUploader", fields: [uploadedById], references: [id])
+  folderId     String?
+  folder       Folder?  @relation(fields: [folderId], references: [id])
+  workspaceId  String?
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+  channelId    String?
+  visibility   String   @default("PRIVATE") // PRIVATE, DEPARTMENT, WORKSPACE, COMPANY
+  status       String   @default("READY") // UPLOADING, READY, PROCESSING, FAILED, QUARANTINED, DELETED
+  isStarred    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  deletedAt    DateTime?
+  versions     FileVersion[]
+  shareLinks   ShareLink[]
+  favorites    Favorite[] @relation("FavoriteFile")
+  recentlyViewed RecentlyViewed[] @relation("RecentFile")
+
+  @@index([uploadedById])
+  @@index([folderId])
+  @@index([workspaceId])
+  @@index([departmentId])
+  @@index([createdAt])
+  @@index([visibility])
+  @@index([status])
+}
+
+model FileVersion {
+  id        String   @id @default(cuid())
+  fileId    String
+  file      File     @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  versionNumber Int
+  storageKey String
+  size      Int
+  checksum  String?
+  uploadedById String
+  uploadedBy User   @relation("FileVersionUploader", fields: [uploadedById], references: [id])
+  changeNote String?
+  createdAt DateTime @default(now())
+
+  @@index([fileId, versionNumber])
+}
+
+model Folder {
+  id           String   @id @default(cuid())
+  name         String
+  parentId     String?
+  parent       Folder?  @relation("FolderParent", fields: [parentId], references: [id])
+  children     Folder[] @relation("FolderParent")
+  ownerId      String
+  owner        User     @relation("FolderOwner", fields: [ownerId], references: [id])
+  workspaceId  String?
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+  visibility   String   @default("PRIVATE") // PRIVATE, DEPARTMENT, WORKSPACE, COMPANY
+  files        File[]
+  documents    Document[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([parentId])
+  @@index([ownerId])
+  @@index([workspaceId])
+  @@index([departmentId])
+}
+
+model Document {
+  id               String   @id @default(cuid())
+  title            String
+  slug             String   @unique
+  description      String?  @db.Text
+  content          String   @db.Text
+  documentType     String   @default("WIKI") // WIKI, POLICY, SOP, GUIDE, PROJECT_DOCUMENT, MEETING_NOTE, GENERAL
+  ownerId          String
+  owner            User     @relation("DocumentOwner", fields: [ownerId], references: [id])
+  workspaceId      String?
+  departmentId     String?
+  department       Department? @relation(fields: [departmentId], references: [id])
+  folderId         String?
+  folder           Folder?  @relation(fields: [folderId], references: [id])
+  visibility       String   @default("PRIVATE") // PRIVATE, OWNER_ONLY, DEPARTMENT, WORKSPACE, COMPANY, USERS
+  status           String   @default("DRAFT") // DRAFT, IN_REVIEW, APPROVED, PUBLISHED, ARCHIVED
+  currentVersionId String?  @unique
+  currentVersion   DocumentVersion? @relation("CurrentVersion", fields: [currentVersionId], references: [id])
+  versions         DocumentVersion[] @relation("DocumentVersions")
+  permissions      DocumentPermission[]
+  comments         DocumentComment[]
+  tags             DocumentTag[]
+  favorites        Favorite[] @relation("FavoriteDocument")
+  recentlyViewed   RecentlyViewed[] @relation("RecentDocument")
+  shareLinks       ShareLink[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  publishedAt      DateTime?
+  archivedAt       DateTime?
+
+  @@index([ownerId])
+  @@index([workspaceId])
+  @@index([departmentId])
+  @@index([folderId])
+  @@index([slug])
+  @@index([updatedAt])
+  @@index([visibility])
+  @@index([status])
+}
+
+model DocumentVersion {
+  id            String   @id @default(cuid())
+  documentId    String
+  document      Document @relation("DocumentVersions", fields: [documentId], references: [id], onDelete: Cascade)
+  versionNumber Int
+  content       String   @db.Text
+  createdById   String
+  createdBy     User     @relation("DocumentVersionCreator", fields: [createdById], references: [id])
+  changeSummary String?  @db.Text
+  currentFor    Document? @relation("CurrentVersion")
+  createdAt     DateTime @default(now())
+
+  @@index([documentId, versionNumber])
+}
+
+model DocumentPermission {
+  id           String   @id @default(cuid())
+  documentId   String
+  document     Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  userId       String?
+  user         User?    @relation(fields: [userId], references: [id])
+  departmentId String?
+  workspaceId  String?
+  permission   String   @default("VIEW") // VIEW, COMMENT, EDIT, SHARE, DOWNLOAD, DELETE, MANAGE_PERMISSIONS, RESTORE_VERSION
+  grantedById  String?
+  grantedBy    User?    @relation("PermissionGranter", fields: [grantedById], references: [id])
+  createdAt    DateTime @default(now())
+
+  @@index([documentId])
+  @@index([userId])
+  @@index([departmentId])
+}
+
+model DocumentComment {
+  id         String   @id @default(cuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  authorId   String
+  author     User     @relation(fields: [authorId], references: [id])
+  content    String   @db.Text
+  resolved   Boolean  @default(false)
+  parentId   String?
+  parent     DocumentComment? @relation("CommentReplies", fields: [parentId], references: [id])
+  replies    DocumentComment[] @relation("CommentReplies")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([documentId])
+}
+
+model ShareLink {
+  id          String   @id @default(cuid())
+  token       String   @unique // high-entropy
+  fileId      String?
+  file        File?    @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  documentId  String?
+  document    Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  permission  String   @default("VIEW") // VIEW, DOWNLOAD, EDIT
+  expiresAt   DateTime?
+  passwordHash String?
+  downloadAllowed Boolean @default(true)
+  createdAt   DateTime @default(now())
+
+  @@index([token])
+  @@index([expiresAt])
+  @@index([fileId])
+  @@index([documentId])
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  documents DocumentTag[]
+  createdAt DateTime @default(now())
+}
+
+model DocumentTag {
+  id         String   @id @default(cuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  tagId      String
+  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, tagId])
+  @@index([tagId])
+}
+
+model Favorite {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fileId     String?
+  file       File?    @relation("FavoriteFile", fields: [fileId], references: [id], onDelete: Cascade)
+  documentId String?
+  document   Document? @relation("FavoriteDocument", fields: [documentId], references: [id], onDelete: Cascade)
+  folderId   String?
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, fileId])
+  @@unique([userId, documentId])
+  @@index([userId])
+}
+
+model RecentlyViewed {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fileId     String?
+  file       File?    @relation("RecentFile", fields: [fileId], references: [id], onDelete: Cascade)
+  documentId String?
+  document   Document? @relation("RecentDocument", fields: [documentId], references: [id], onDelete: Cascade)
+  viewedAt   DateTime @default(now())
+
+  @@index([userId, viewedAt])
 }
 
 // AUDIT & INTEGRATIONS

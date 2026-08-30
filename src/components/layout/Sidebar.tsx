@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, LayoutDashboard, Users, Building2, ClipboardList, Kanban, Wallet, Ticket, BarChart3, CalendarCheck, CalendarDays, Megaphone, FileText, ScrollText, Settings, Plug, Briefcase, Mail, ShieldCheck, FileCheck, Layers, Sparkles, Crown, Award, Code, Hash, MessageCircle, Video, Calendar } from "lucide-react";
+import { Home, LayoutDashboard, Users, Building2, ClipboardList, Kanban, Wallet, Ticket, BarChart3, CalendarCheck, CalendarDays, Megaphone, FileText, ScrollText, Settings, Plug, Briefcase, Mail, ShieldCheck, FileCheck, Layers, Sparkles, Crown, Award, Code, Hash, MessageCircle, Video, Calendar, Folder, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type NavItem = { href:string; label:string; icon:any; badge?:string };
@@ -65,6 +65,16 @@ const sections: NavSection[] = [
       { href: "/tasks/board", label: "Kanban Board", icon: Kanban },
       { href: "/my-work", label: "My Work", icon: Briefcase },
       { href: "/tickets", label: "Tickets", icon: Ticket },
+    ],
+  },
+  {
+    title: "Content",
+    icon: Folder,
+    color: "text-indigo-600",
+    items: [
+      { href: "/files", label: "Files", icon: Folder, badge: "New" },
+      { href: "/documents", label: "Documents", icon: FileText },
+      { href: "/wiki", label: "Knowledge Base", icon: BookOpen, badge: "New" },
     ],
   },
   {

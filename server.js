@@ -111,6 +111,51 @@ app.prepare().then(() => {
       io.emit("presence:update", { userId, status });
     });
 
+    // Meeting signaling — WebRTC SFU mesh
+    socket.on("meeting:join", ({ meetingId, meetingCode }) => {
+      const room = `meeting:${meetingId||meetingCode}`;
+      socket.join(room);
+      socket.to(room).emit("meeting:participant-joined", { meetingId, meetingCode, userId, socketId: socket.id });
+      console.log(`[meeting] ${userId} joined ${room}`);
+    });
+    socket.on("meeting:leave", ({ meetingId, meetingCode }) => {
+      const room = `meeting:${meetingId||meetingCode}`;
+      socket.leave(room);
+      socket.to(room).emit("meeting:participant-left", { meetingId, meetingCode, userId });
+    });
+    socket.on("meeting:offer", (data) => {
+      const room = `meeting:${data.meetingId||data.meetingCode}`;
+      socket.to(room).emit("meeting:offer", { ...data, from: userId, socketId: socket.id });
+    });
+    socket.on("meeting:answer", (data) => {
+      const room = `meeting:${data.meetingId||data.meetingCode}`;
+      socket.to(room).emit("meeting:answer", { ...data, from: userId });
+    });
+    socket.on("meeting:ice-candidate", (data) => {
+      const room = `meeting:${data.meetingId||data.meetingCode}`;
+      socket.to(room).emit("meeting:ice-candidate", { ...data, from: userId });
+    });
+    socket.on("meeting:media-state", (data) => {
+      const room = `meeting:${data.meetingId||data.meetingCode}`;
+      io.to(room).emit("meeting:media-state", { ...data, userId });
+    });
+    socket.on("meeting:screen-share", (data) => {
+      const room = `meeting:${data.meetingId||data.meetingCode}`;
+      io.to(room).emit("meeting:screen-share", { ...data, userId });
+    });
+    socket.on("meeting:hand-raise", (data) => {
+      const room = `meeting:${data.meetingId||data.meetingCode}`;
+      io.to(room).emit("meeting:hand-raise", { ...data, userId });
+    });
+    socket.on("meeting:mute", (data) => {
+      const room = `meeting:${data.meetingId||data.meetingCode}`;
+      io.to(room).emit("meeting:mute", { ...data, userId });
+    });
+    socket.on("meeting:lock", (data) => {
+      const room = `meeting:${data.meetingId||data.meetingCode}`;
+      io.to(room).emit("meeting:lock", data);
+    });
+
     socket.on("disconnect", () => {
       console.log(`[socket] user ${userId} disconnected`);
       presence.delete(userId);

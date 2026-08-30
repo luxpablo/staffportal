@@ -61,6 +61,9 @@ model User {
   createdConversations Conversation[] @relation("ConversationCreator")
   directMessages   DirectMessage[] @relation("DirectMessageAuthor")
   directMessageReactions DirectMessageReaction[]
+  hostedMeetings   Meeting[] @relation("MeetingHost")
+  meetingParticipants MeetingParticipant[]
+  calendarEvents   CalendarEvent[]
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -122,6 +125,8 @@ model Department {
   members     User[]
   tasks       Task[]
   channels    Channel[]
+  meetings    Meeting[]
+  calendarEvents CalendarEvent[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -617,6 +622,7 @@ model Channel {
   topic       String?  @db.Text
   members     ChannelMember[]
   messages    Message[]
+  meetings    Meeting[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -752,6 +758,98 @@ model DirectMessageReaction {
 
   @@unique([messageId, userId, emoji])
   @@index([messageId])
+}
+
+// MEETINGS & CALENDAR — Phase 2 (WebRTC, voice/video, screen share, scheduler, calendar)
+model Meeting {
+  id                 String   @id @default(cuid())
+  title              String
+  description        String?  @db.Text
+  hostId             String
+  host               User     @relation("MeetingHost", fields: [hostId], references: [id])
+  workspaceId        String?
+  departmentId       String?
+  department         Department? @relation(fields: [departmentId], references: [id])
+  channelId          String?
+  channel            Channel? @relation(fields: [channelId], references: [id])
+  type               String   @default("SCHEDULED") // INSTANT, SCHEDULED, RECURRING, PRIVATE, DEPARTMENT, COMPANY, ONE_TO_ONE
+  status             String   @default("SCHEDULED") // SCHEDULED, WAITING, LIVE, ENDED, CANCELLED
+  scheduledStart     DateTime
+  scheduledEnd       DateTime
+  startedAt          DateTime?
+  endedAt            DateTime?
+  meetingCode        String   @unique // ZYP-MEET-xxxx, not sequential ID
+  passwordHash       String?
+  waitingRoomEnabled Boolean  @default(false)
+  recordingEnabled   Boolean  @default(false)
+  screenShareEnabled Boolean  @default(true)
+  chatEnabled        Boolean  @default(true)
+  isLocked           Boolean  @default(false)
+  maxParticipants    Int      @default(50)
+  participants       MeetingParticipant[]
+  calendarEvent      CalendarEvent?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([hostId])
+  @@index([status])
+  @@index([scheduledStart])
+  @@index([workspaceId])
+  @@index([departmentId])
+  @@index([channelId])
+  @@index([meetingCode])
+}
+
+model MeetingParticipant {
+  id                String   @id @default(cuid())
+  meetingId         String
+  meeting           Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role              String   @default("PARTICIPANT") // HOST, CO_HOST, PARTICIPANT
+  status            String   @default("INVITED") // INVITED, WAITING, ADMITTED, JOINED, LEFT, REMOVED
+  joinedAt          DateTime?
+  leftAt            DateTime?
+  microphoneEnabled Boolean  @default(true)
+  cameraEnabled     Boolean  @default(true)
+  screenSharing     Boolean  @default(false)
+  handRaised        Boolean  @default(false)
+  createdAt         DateTime @default(now())
+
+  @@unique([meetingId, userId])
+  @@index([meetingId])
+  @@index([userId])
+  @@index([status])
+}
+
+model CalendarEvent {
+  id          String   @id @default(cuid())
+  title       String
+  description String?  @db.Text
+  type        String   @default("MEETING") // MEETING, TASK, PROJECT, INTERVIEW, MAINTENANCE, COMPANY_EVENT, ANNOUNCEMENT, LEAVE
+  creatorId   String
+  creator     User     @relation(fields: [creatorId], references: [id])
+  workspaceId String?
+  departmentId String?
+  department  Department? @relation(fields: [departmentId], references: [id])
+  meetingId   String?  @unique
+  meeting     Meeting? @relation(fields: [meetingId], references: [id])
+  taskId      String?
+  visibility  String   @default("PRIVATE") // PRIVATE, PARTICIPANTS, DEPARTMENT, WORKSPACE, COMPANY
+  startsAt    DateTime
+  endsAt      DateTime
+  timezone    String   @default("Asia/Kolkata")
+  recurrenceRule String? // RRULE
+  isAllDay    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([creatorId])
+  @@index([startsAt, endsAt])
+  @@index([visibility])
+  @@index([departmentId])
+  @@index([workspaceId])
+  @@index([meetingId])
 }
 
 // AUDIT & INTEGRATIONS

@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, LayoutDashboard, Users, Building2, ClipboardList, Kanban, Wallet, Ticket, BarChart3, CalendarCheck, CalendarDays, Megaphone, FileText, ScrollText, Settings, Plug, Briefcase, Mail, ShieldCheck, FileCheck, Layers, Sparkles, Crown, Award, Code, Hash, MessageCircle } from "lucide-react";
+import { Home, LayoutDashboard, Users, Building2, ClipboardList, Kanban, Wallet, Ticket, BarChart3, CalendarCheck, CalendarDays, Megaphone, FileText, ScrollText, Settings, Plug, Briefcase, Mail, ShieldCheck, FileCheck, Layers, Sparkles, Crown, Award, Code, Hash, MessageCircle, Video, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type NavItem = { href:string; label:string; icon:any; badge?:string };
@@ -51,6 +51,8 @@ const sections: NavSection[] = [
     items: [
       { href: "/channels", label: "Channels", icon: Hash, badge: "New" },
       { href: "/channels?dm=1", label: "Direct Messages", icon: MessageCircle },
+      { href: "/meetings", label: "Meetings", icon: Video, badge: "New" },
+      { href: "/calendar", label: "Calendar", icon: Calendar },
       { href: "/announcements", label: "Announcements", icon: Megaphone },
     ],
   },
